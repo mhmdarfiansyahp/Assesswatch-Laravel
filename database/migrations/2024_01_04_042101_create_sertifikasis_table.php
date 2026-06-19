@@ -14,22 +14,16 @@ return new class extends Migration
     public function up()
     {
         Schema::create('sertifikasi', function (Blueprint $table) {
-            $table->integer('id_sertifikasi')->autoIncrement();
-            $table->integer('id_prodi');
-            $table->foreign('id_prodi')->references('id_prodi')->on('prodi');
-            $table->string('nama_sertifikasi',50);
+            $table->bigIncrements('id');
+            $table->bigInteger('prodi_id')->unsigned();
+            $table->foreign('prodi_id')->references('id')->on('prodi');
+            $table->string('nama_sertifikasi', 100)->nullable();
+            $table->string('lembaga', 100)->nullable();
+            $table->enum('level', ['Nasional', 'Internasional'])->nullable();
             $table->date('tanggal_sertifikasi');
-            $table->string('lembaga',50);
-            $table->string('level',50);
-            $table->string('buktipendukung');
-            $table->integer('kompeten');
-            $table->integer('tidakkompeten');
-            $table->integer('tidakhadir');
-            $table->integer('jumlah');
-            $table->string('status',50)->default('Aktif');
-            // $table->date('tanggal_sertifikasi');
-
-             // Replace 'nama_tabel_prodi' with the actual table name
+            $table->uuid('verification_code')->unique()->nullable();
+            $table->boolean('status')->default(true);
+            $table->timestamps();
         });
     }
 

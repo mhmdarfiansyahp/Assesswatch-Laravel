@@ -14,9 +14,9 @@ return new class extends Migration
     public function up()
     {
         Schema::create('prodi', function (Blueprint $table) {
-            $table->integer('id_prodi')->autoIncrement();
-            $table->string('nama_prodi',50);            
-            $table->string('status',50)->default('Aktif');
+            $table->bigIncrements('id');
+            $table->string('nama_prodi',100);            
+            $table->boolean('status')->default(true);
             $table->timestamps();
         });
     }

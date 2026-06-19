@@ -9,11 +9,20 @@ class Prodi extends Model
 {
     use HasFactory;
 
-    protected $primaryKey = 'id_prodi';
-
     protected $table = 'prodi';
+    protected $fillable = [
+        'nama_prodi',
+        'status',
+    ];
 
-    public $incrementing = true;
 
-    protected $fillable = ['id_prodi','nama_prodi','status'];
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
+
+    public function sertifikasis()
+    {
+        return $this->hasMany(Sertifikasi::class);
+    }
 }

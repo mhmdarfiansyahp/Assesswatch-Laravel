@@ -19,8 +19,12 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'username',
         'email',
         'password',
+        'role',
+        'prodi_id',
+        'status',
     ];
 
     /**
@@ -41,4 +45,19 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    public function prodi()
+    {
+        return $this->belongsTo(Prodi::class);
+    }
+
+    public function auditLogs()
+    {
+        return $this->hasMany(AuditLog::class);
+    }
+
+    public function asesmens()
+    {
+        return $this->hasMany(Asesmens::class);
+    }
 }

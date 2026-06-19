@@ -14,11 +14,15 @@ return new class extends Migration
     public function up()
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->id()->autoIncrement();;
+            $table->bigIncrements('id');
             $table->string('name');
-            $table->string('username');
+            $table->string('username')->unique();
+            $table->string('email')->unique();
             $table->string('password');
-            $table->unsignedTinyInteger('status')->default(1); // Change 'unsignedTinyInteger' as per your requirements
+            $table->enum('role', ['admin', 'instruktur', 'mahasiswa']);
+            $table->foreignId('prodi_id')->nullable()->constrained('prodi')->nullOnDelete();
+            $table->boolean('status');
+            $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
