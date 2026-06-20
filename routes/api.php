@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\API\ProdiController;
 use App\Http\Controllers\API\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -24,5 +25,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
      Route::middleware('role:admin')->group(function () {
         Route::apiResource('users', UserController::class);
+        Route::apiResource('prodis', ProdiController::class);
     });
 });

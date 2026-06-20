@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             ProdiSeeder::class,
             UserSeeder::class,
+            SertifikasiSeeder::class,
         ]);
     }
 }
