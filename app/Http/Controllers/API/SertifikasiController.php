@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Sertifikasi;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class SertifikasiController extends Controller
 {
@@ -25,11 +26,17 @@ class SertifikasiController extends Controller
     {
         $request->validate([
             'prodi_id' => 'required|exists:prodi,id',
-            'nama_sertifikasi' => 'nullable|string|max:100',
-            'lembaga' => 'nullable|string|max:100',
-            'level' => 'nullable|in:Nasional,Internasional',
+            'nama_sertifikasi' => 'required|string|max:100',
+            'lembaga' => 'required|string|max:100',
+            'level' => 'required|in:Nasional,Internasional',
             'tanggal_sertifikasi' => 'required|date',
         ]);
+
+        do {
+            $schemeCode = 'SCM-' . strtoupper(Str::random(8));
+        } while (
+            Sertifikasi::where('scheme_code', $schemeCode)->exists()
+        );
 
         $sertifikasi = Sertifikasi::create([
             'prodi_id' => $request->prodi_id,
@@ -37,11 +44,14 @@ class SertifikasiController extends Controller
             'lembaga' => $request->lembaga,
             'level' => $request->level,
             'tanggal_sertifikasi' => $request->tanggal_sertifikasi,
-            'verification_code' => Str::uuid(),
+            'scheme_code' => $schemeCode,
             'status' => true,
         ]);
 
-        return response()->json($sertifikasi, 201);
+        return response()->json([
+            'message' => 'Sertifikasi created',
+            'data' => $sertifikasi
+        ], 201);
     }
 
     /**
@@ -60,9 +70,28 @@ class SertifikasiController extends Controller
     public function update(Request $request, string $id)
     {
         $sertifikasi = Sertifikasi::findOrFail($id);
-        $sertifikasi->update($request->all());
+        $request->validate([
+            'prodi_id' => 'required|exists:prodi,id',
+            'nama_sertifikasi' => 'required|string|max:100',
+            'lembaga' => 'required|string|max:100',
+            'level' => 'required|in:Nasional,Internasional',
+            'tanggal_sertifikasi' => 'required|date',
+            'status' => 'required|boolean',
+        ]);
 
-        return response()->json($sertifikasi);
+        $sertifikasi->update([
+            'prodi_id' => $request->prodi_id,
+            'nama_sertifikasi' => $request->nama_sertifikasi,
+            'lembaga' => $request->lembaga,
+            'level' => $request->level,
+            'tanggal_sertifikasi' => $request->tanggal_sertifikasi,
+            'status' => $request->status,
+        ]);
+
+        return response()->json([
+            'message' => 'Sertifikasi updated',
+            'data' => $sertifikasi
+        ]);
     }
 
     /**

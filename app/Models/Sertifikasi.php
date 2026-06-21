@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Sertifikasi extends Model
 {
     use HasFactory;
+    protected $table = 'sertifikasi';
 
     protected $fillable = [
         'prodi_id',
@@ -15,7 +16,7 @@ class Sertifikasi extends Model
         'lembaga',
         'level',
         'tanggal_sertifikasi',
-        'verification_code',
+        'scheme_code',
         'status',
     ];
 

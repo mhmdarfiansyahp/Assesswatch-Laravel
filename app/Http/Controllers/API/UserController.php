@@ -5,6 +5,8 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -21,9 +23,29 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        $user = User::create($request->all());
-        return response()->json(['message' => 'User created',
-            'data' => $user], 201);
+        $request->validate([
+            'name' => 'required|string|max:100',
+            'username' => 'required|string|max:50|unique:users,username',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string',
+            'role' => ['required', Rule::in(['admin', 'instruktur', 'mahasiswa'])],
+            'prodi_id' => 'nullable|exists:prodi,id',
+        ]);
+
+        $user = User::create([
+            'name' => $request->name,
+            'username' => $request->username,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => $request->role,
+            'prodi_id' => $request->prodi_id,
+            'status' => true,
+        ]);
+
+        return response()->json([
+            'message' => 'User created',
+            'data' => $user
+        ], 201);
     }
 
     /**
@@ -40,9 +62,39 @@ class UserController extends Controller
     public function update(Request $request, string $id)
     {
         $user = User::findOrFail($id);
-        $user->update($request->all());
-        return response()->json(['message' => 'User updated',
-            'data' => $user]);
+
+        $request->validate([
+            'name' => 'required|string|max:100',
+            'username' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('users', 'username')->ignore($id),
+            ],
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('users', 'email')->ignore($id),
+            ],
+            'role' => ['required', Rule::in(['admin', 'instruktur', 'mahasiswa'])],
+            'prodi_id' => 'nullable|exists:prodi,id',
+            'status' => 'required|boolean',
+        ]);
+
+        $user->update([
+            'name' => $request->name,
+            'username' => $request->username,
+            'email' => $request->email,
+            'role' => $request->role,
+            'prodi_id' => $request->prodi_id,
+            'status' => $request->status,
+            'password' => Hash::make($request->password),
+        ]);
+
+        return response()->json([
+            'message' => 'User updated',
+            'data' => $user
+        ]);
     }
 
     /**

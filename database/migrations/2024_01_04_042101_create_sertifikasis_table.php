@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('lembaga', 100)->nullable();
             $table->enum('level', ['Nasional', 'Internasional'])->nullable();
             $table->date('tanggal_sertifikasi');
-            $table->uuid('verification_code')->unique()->nullable();
+            $table->string('scheme_code')->unique();
             $table->boolean('status')->default(true);
             $table->timestamps();
         });

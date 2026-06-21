@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Prodi;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ProdiController extends Controller
 {
@@ -21,9 +22,18 @@ class ProdiController extends Controller
      */
     public function store(Request $request)
     {
-        $prodi = Prodi::create($request->all());
-        return response()->json(['message' => 'Prodi created',
-            'data' => $prodi], 201);
+        $request->validate([
+            'nama_prodi' => 'required|string|max:100|unique:prodi,nama_prodi',
+        ]);
+
+        $prodi = Prodi::create([
+            'nama_prodi' => $request->nama_prodi,
+            'status' => true,
+        ]);
+        return response()->json([
+            'message' => 'Prodi created',
+            'data' => $prodi
+        ], 201);
     }
 
     /**
@@ -40,9 +50,25 @@ class ProdiController extends Controller
     public function update(Request $request, string $id)
     {
         $prodi = Prodi::findOrFail($id);
-        $prodi->update($request->all());
-        return response()->json(['message' => 'Prodi updated',
-            'data' => $prodi]);
+        $request->validate([
+            'nama_prodi' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('prodi', 'nama_prodi')->ignore($id),
+            ],
+            'status' => 'required|boolean',
+        ]);
+
+        $prodi->update([
+            'nama_prodi' => $request->nama_prodi,
+            'status' => $request->status,
+        ]);
+
+        return response()->json([
+            'message' => 'Prodi updated',
+            'data' => $prodi
+        ]);
     }
 
     /**
