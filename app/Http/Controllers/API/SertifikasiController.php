@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Sertifikasi;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class SertifikasiController extends Controller
@@ -103,5 +104,29 @@ class SertifikasiController extends Controller
         $sertifikasi->delete();
 
         return response()->json(['message' => 'Deleted']);
+    }
+
+    public function getSertifikasi(Request $request)
+    {
+        $instruktur = $request->user();
+
+        if ($instruktur->role !== 'instruktur') {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        $prodiIds = DB::table('instruktur_prodi')
+            ->where('instruktur_id', $instruktur->id)
+            ->pluck('prodi_id');
+
+        $sertifikasi = Sertifikasi::with('prodi')
+            ->whereIn('prodi_id', $prodiIds)
+            ->get();
+
+        return response()->json([
+            'message' => 'Daftar sertifikasi instruktur',
+            'data' => $sertifikasi
+        ]);
     }
 }

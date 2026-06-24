@@ -42,6 +42,10 @@ class AsesmenController extends Controller
 
         $mahasiswa = User::where('role', 'mahasiswa')
             ->where('prodi_id', $sertifikasi->prodi_id)
+            ->whereDoesntHave('asesmens', function ($q) use ($sertifikasi) {
+                $q->where('sertifikasi_id', $sertifikasi->id)
+                    ->where('status_kompetensi', 'Kompeten');
+            })
             ->get()
             ->map(function ($mhs) use ($asesmenMap) {
 

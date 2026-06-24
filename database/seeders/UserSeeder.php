@@ -13,27 +13,18 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         /*
-        |--------------------------------------------------------------------------
-        | Ambil prodi
-        |--------------------------------------------------------------------------
+        |----------------------------------------
+        | PRODI
+        |----------------------------------------
         */
-
-        $teknikInformatika = Prodi::where(
-            'nama_prodi',
-            'Teknik Informatika'
-        )->first();
-
-        $sistemInformasi = Prodi::where(
-            'nama_prodi',
-            'Sistem Informasi'
-        )->first();
+        $teknikInformatika = Prodi::where('nama_prodi', 'Teknik Informatika')->first();
+        $sistemInformasi = Prodi::where('nama_prodi', 'Sistem Informasi')->first();
 
         /*
-        |--------------------------------------------------------------------------
+        |----------------------------------------
         | ADMIN
-        |--------------------------------------------------------------------------
+        |----------------------------------------
         */
-
         User::create([
             'name' => 'Admin Utama',
             'username' => 'admin',
@@ -45,11 +36,10 @@ class UserSeeder extends Seeder
         ]);
 
         /*
-        |--------------------------------------------------------------------------
+        |----------------------------------------
         | INSTRUKTUR
-        |--------------------------------------------------------------------------
+        |----------------------------------------
         */
-
         $instruktur1 = User::create([
             'name' => 'Instruktur Satu',
             'username' => 'instruktur1',
@@ -73,27 +63,23 @@ class UserSeeder extends Seeder
         ]);
 
         /*
-        |--------------------------------------------------------------------------
-        | ASSIGN PRODI KE INSTRUKTUR
-        |--------------------------------------------------------------------------
+        |----------------------------------------
+        | RELASI INSTRUKTUR - PRODI
+        |----------------------------------------
         */
-
         DB::table('instruktur_prodi')->insert([
-
             [
                 'instruktur_id' => $instruktur1->id,
                 'prodi_id' => $teknikInformatika->id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-
             [
                 'instruktur_id' => $instruktur1->id,
                 'prodi_id' => $sistemInformasi->id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-
             [
                 'instruktur_id' => $instruktur2->id,
                 'prodi_id' => $teknikInformatika->id,
@@ -103,11 +89,10 @@ class UserSeeder extends Seeder
         ]);
 
         /*
-        |--------------------------------------------------------------------------
-        | MAHASISWA TI
-        |--------------------------------------------------------------------------
+        |----------------------------------------
+        | MAHASISWA TEKNIK INFORMATIKA
+        |----------------------------------------
         */
-
         User::create([
             'name' => 'Mahasiswa TI 1',
             'username' => 'mhs_ti_1',
@@ -131,11 +116,10 @@ class UserSeeder extends Seeder
         ]);
 
         /*
-        |--------------------------------------------------------------------------
-        | MAHASISWA SI
-        |--------------------------------------------------------------------------
+        |----------------------------------------
+        | MAHASISWA SISTEM INFORMASI
+        |----------------------------------------
         */
-
         User::create([
             'name' => 'Mahasiswa SI 1',
             'username' => 'mhs_si_1',

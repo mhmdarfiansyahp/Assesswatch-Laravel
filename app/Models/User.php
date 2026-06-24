@@ -79,4 +79,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Asesmens::class, 'instruktur_id');
     }
+
+    public function asesmens()
+    {
+        return $this->hasMany(Asesmens::class, 'user_id');
+    }
 }

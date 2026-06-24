@@ -41,5 +41,9 @@ Route::middleware('auth:sanctum')->group(function () {
             '/asesmen/bulk-input',
             [AsesmenController::class, 'bulkInput']
         );
+        Route::get(
+            '/instruktur/sertifikasi',
+            [SertifikasiController::class, 'getSertifikasi']
+        );
     });
 });
