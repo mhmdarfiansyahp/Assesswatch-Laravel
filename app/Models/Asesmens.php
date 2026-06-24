@@ -17,6 +17,7 @@ class Asesmens extends Model
         'bukti_pendukung',
         'catatan',
         'tanggal_asesmen',
+        'certificate_code',
     ];
 
     public function user()

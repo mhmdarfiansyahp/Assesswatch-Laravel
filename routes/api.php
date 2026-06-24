@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AsesmenController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\ProdiController;
 use App\Http\Controllers\API\SertifikasiController;
@@ -24,9 +25,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
-     Route::middleware('role:admin')->group(function () {
+    Route::middleware('role:admin')->group(function () {
         Route::apiResource('users', UserController::class);
         Route::apiResource('prodi', ProdiController::class);
         Route::apiResource('sertifikasi', SertifikasiController::class);
+    });
+
+    Route::middleware('role:instruktur')->group(function () {
+        Route::get(
+            '/asesmen/sertifikasi/{sertifikasi}',
+            [AsesmenController::class, 'listMahasiswa']
+        );
+
+        Route::post(
+            '/asesmen/bulk-input',
+            [AsesmenController::class, 'bulkInput']
+        );
     });
 });

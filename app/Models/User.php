@@ -25,6 +25,8 @@ class User extends Authenticatable
         'role',
         'prodi_id',
         'status',
+        'nim',
+        'nip',
     ];
 
     /**
@@ -51,13 +53,30 @@ class User extends Authenticatable
         return $this->belongsTo(Prodi::class);
     }
 
+    // instruktur bisa mengampu banyak prodi
+    public function prodiYangDiampu()
+    {
+        return $this->belongsToMany(
+            Prodi::class,
+            'instruktur_prodi',
+            'instruktur_id',
+            'prodi_id'
+        );
+    }
+
     public function auditLogs()
     {
         return $this->hasMany(AuditLog::class);
     }
 
-    public function asesmens()
+    public function asesmenMahasiswa()
     {
-        return $this->hasMany(Asesmens::class);
+        return $this->hasMany(Asesmens::class, 'user_id');
+    }
+
+    // asesmen yang dilakukan instruktur
+    public function asesmenSebagaiInstruktur()
+    {
+        return $this->hasMany(Asesmens::class, 'instruktur_id');
     }
 }

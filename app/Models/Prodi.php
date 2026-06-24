@@ -15,7 +15,6 @@ class Prodi extends Model
         'status',
     ];
 
-
     public function users()
     {
         return $this->hasMany(User::class);
@@ -24,5 +23,15 @@ class Prodi extends Model
     public function sertifikasis()
     {
         return $this->hasMany(Sertifikasi::class);
+    }
+
+    public function instrukturs()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'instruktur_prodi',
+            'prodi_id',
+            'instruktur_id'
+        );
     }
 }

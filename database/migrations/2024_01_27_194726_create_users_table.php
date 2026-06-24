@@ -23,6 +23,8 @@ return new class extends Migration
             $table->foreignId('prodi_id')->nullable()->constrained('prodi')->nullOnDelete();
             $table->boolean('status');
             $table->timestamp('email_verified_at')->nullable();
+            $table->string('nim', 20)->nullable()->unique();
+            $table->string('nip', 20)->nullable()->unique();
             $table->rememberToken();
             $table->timestamps();
         });
