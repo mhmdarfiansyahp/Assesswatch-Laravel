@@ -10,6 +10,8 @@ use App\Models\User;
 use App\Services\CertificateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+
 
 class AsesmenController extends Controller
 {
@@ -82,7 +84,7 @@ class AsesmenController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $validated = $request->validate(['sertifikasi_id' => 'required|exists:sertifikasi,id', 'tanggal_asesmen' => 'required|date', 'asesmens' => 'required|array', 'asesmens.*.user_id' => 'required|exists:users,id', 'asesmens.*.status_kompetensi' => 'required|in:Kompeten,Tidak Kompeten,Tidak Hadir', 'asesmens.*.catatan' => 'nullable|string',]);
+        $validated = $request->validate(['sertifikasi_id' => 'required|exists:sertifikasi,id', 'tanggal_asesmen' => 'required|date', 'asesmens' => 'required|array', 'asesmens.*.user_id' => 'required|exists:users,id', 'asesmens.*.status_kompetensi' => 'required|in:Kompeten,Tidak Kompeten,Tidak Hadir', 'asesmens.*.catatan' => 'nullable|string', 'asesmens.*.bukti_pendukung' => 'nullable|file|mimes:pdf,png,jpg,jpeg|max:5120',]);
         $sertifikasi = Sertifikasi::findOrFail($validated['sertifikasi_id']);
 
         $hasAccess = DB::table('instruktur_prodi')
@@ -99,7 +101,7 @@ class AsesmenController extends Controller
         DB::beginTransaction();
 
         try {
-            foreach ($validated['asesmens'] as $item) {
+            foreach ($validated['asesmens'] as $index => $item) {
                 $mahasiswa = User::where('id', $item['user_id'])->first();
 
                 if (!$mahasiswa || $mahasiswa->role !== 'mahasiswa') {
@@ -109,6 +111,7 @@ class AsesmenController extends Controller
                 if ($mahasiswa->prodi_id != $sertifikasi->prodi_id) {
                     throw new \Exception("Mahasiswa beda prodi: " . $item['user_id']);
                 }
+
                 $asesmen = Asesmens::where('user_id', $mahasiswa->id)->where('sertifikasi_id', $sertifikasi->id)->first();
                 $oldValues = $asesmen ? $asesmen->toArray() : null;
 
@@ -125,6 +128,23 @@ class AsesmenController extends Controller
                     }
                 }
 
+                $filePath = $asesmen?->bukti_pendukung;
+                if ($request->hasFile("asesmens.$index.bukti_pendukung")) {
+                    $file = $request->file("asesmens.$index.bukti_pendukung");
+                    if ($filePath) {
+                        Storage::disk('public')->delete($filePath);
+                    }
+
+                    $filePath = $file->store(
+                        'bukti-sertifikasi',
+                        'public'
+                    );
+                }
+
+                if ($item['status_kompetensi'] === 'Kompeten' && !$request->hasFile("asesmens.$index.bukti_pendukung") && !$asesmen?->bukti_pendukung) {
+                    throw new \Exception("Bukti sertifikasi wajib untuk mahasiswa kompeten");
+                }
+
                 if ($asesmen) {
                     $asesmen->update([
                         'status_kompetensi' => $item['status_kompetensi'],
@@ -132,6 +152,7 @@ class AsesmenController extends Controller
                         'tanggal_asesmen' => $validated['tanggal_asesmen'],
                         'instruktur_id' => $instruktur->id,
                         'certificate_code' => $certificateCode ?? $asesmen?->certificate_code,
+                        'bukti_pendukung' => $filePath,
                     ]);
                 } else {
                     $asesmen = Asesmens::create([
@@ -142,6 +163,7 @@ class AsesmenController extends Controller
                         'catatan' => $item['catatan'] ?? null,
                         'tanggal_asesmen' => $validated['tanggal_asesmen'],
                         'certificate_code' => $certificateCode ?? $asesmen?->certificate_code,
+                        'bukti_pendukung' => $filePath,
                     ]);
                 }
 

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AsesmenController;
 use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\Api\MahasiswaKompetensiController;
 use App\Http\Controllers\API\ProdiController;
 use App\Http\Controllers\API\SertifikasiController;
 use App\Http\Controllers\API\UserController;
@@ -44,6 +45,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get(
             '/instruktur/sertifikasi',
             [SertifikasiController::class, 'getSertifikasi']
+        );
+    });
+
+    Route::middleware('role:mahasiswa')->group(function () {
+        Route::get(
+            '/mahasiswa/kompetensi',
+            [MahasiswaKompetensiController::class, 'index']
+        );
+
+        Route::get(
+            '/mahasiswa/kompetensi/{asesmen}/download',
+            [MahasiswaKompetensiController::class, 'download']
         );
     });
 });
