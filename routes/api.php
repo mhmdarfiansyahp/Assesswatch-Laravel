@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\MahasiswaKompetensiController;
 use App\Http\Controllers\API\ProdiController;
 use App\Http\Controllers\API\SertifikasiController;
 use App\Http\Controllers\API\UserController;
+use App\Http\Controllers\Api\Admin\DashboardController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('users', UserController::class);
         Route::apiResource('prodi', ProdiController::class);
         Route::apiResource('sertifikasi', SertifikasiController::class);
+        Route::get('/dashboard/kompetensi-prodi', [DashboardController::class, 'kompetensiPerProdi']);
     });
 
     Route::middleware('role:instruktur')->group(function () {
