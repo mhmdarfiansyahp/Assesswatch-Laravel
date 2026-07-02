@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Exports\DashboardKompetensiExport;
 use App\Http\Controllers\Controller;
-use App\Models\Asesmen;
 use App\Models\Asesmens;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DashboardController extends Controller
 {
@@ -39,9 +41,70 @@ class DashboardController extends Controller
             )
             ->groupBy('prodi.id', 'prodi.nama_prodi')
             ->get();
+
+        $summary = [
+            'total_mahasiswa' => Asesmens::count(),
+            'kompeten' => Asesmens::where(
+                'status_kompetensi',
+                'Kompeten'
+            )->count(),
+            'tidak_kompeten' => Asesmens::where(
+                'status_kompetensi',
+                'Tidak Kompeten'
+            )->count(),
+            'tidak_hadir' => Asesmens::where(
+                'status_kompetensi',
+                'Tidak Hadir'
+            )->count(),
+            'belum_dinilai' => Asesmens::whereNull(
+                'status_kompetensi'
+            )->count(),
+        ];
+
         return response()->json([
             'success' => true,
+            'summary' => $summary,
             'data' => $data
         ]);
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $filename =
+            'laporan-kompetensi-' .
+            now()->format('Y-m-d_H-i-s') .
+            '.xlsx';
+
+        return Excel::download(
+            new DashboardKompetensiExport(
+                $request->tahun,
+                $request->sertifikasi_id,
+                $request->prodi_id
+            ),
+            $filename
+        );
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $data = (new DashboardKompetensiExport(
+            $request->tahun,
+            $request->sertifikasi_id,
+            $request->prodi_id
+        ))->collection();
+
+        $pdf = Pdf::loadView(
+            'pdf.dashboard-pdf',
+            [
+                'data' => $data
+            ]
+        );
+
+        $filename =
+            'laporan-kompetensi-' .
+            now()->format('Y-m-d_H-i-s') .
+            '.pdf';
+
+        return $pdf->download($filename);
     }
 }

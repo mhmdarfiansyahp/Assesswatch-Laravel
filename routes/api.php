@@ -32,6 +32,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('prodi', ProdiController::class);
         Route::apiResource('sertifikasi', SertifikasiController::class);
         Route::get('/dashboard/kompetensi-prodi', [DashboardController::class, 'kompetensiPerProdi']);
+        Route::get(
+            '/dashboard/export-excel',
+            [DashboardController::class, 'exportExcel']
+        );
+
+        Route::get(
+            '/dashboard/export-pdf',
+            [DashboardController::class, 'exportPdf']
+        );
     });
 
     Route::middleware('role:instruktur')->group(function () {

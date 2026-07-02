@@ -116,14 +116,10 @@ class AsesmenController extends Controller
                 $oldValues = $asesmen ? $asesmen->toArray() : null;
 
                 $certificateCode = null;
-
                 if ($item['status_kompetensi'] === 'Kompeten') {
-
                     if ($asesmen && $asesmen->certificate_code) {
-
                         $certificateCode = $asesmen->certificate_code;
                     } else {
-
                         $certificateCode = CertificateService::generateCertificateCode($sertifikasi);
                     }
                 }
