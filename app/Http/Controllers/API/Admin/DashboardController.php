@@ -43,22 +43,34 @@ class DashboardController extends Controller
             ->get();
 
         $summary = [
-            'total_mahasiswa' => Asesmens::count(),
-            'kompeten' => Asesmens::where(
-                'status_kompetensi',
-                'Kompeten'
-            )->count(),
-            'tidak_kompeten' => Asesmens::where(
-                'status_kompetensi',
-                'Tidak Kompeten'
-            )->count(),
-            'tidak_hadir' => Asesmens::where(
-                'status_kompetensi',
-                'Tidak Hadir'
-            )->count(),
-            'belum_dinilai' => Asesmens::whereNull(
-                'status_kompetensi'
-            )->count(),
+            'total_mahasiswa' => (clone $query)->count(),
+
+            'kompeten' => (clone $query)
+                ->where(
+                    'asesmens.status_kompetensi',
+                    'Kompeten'
+                )
+                ->count(),
+
+            'tidak_kompeten' => (clone $query)
+                ->where(
+                    'asesmens.status_kompetensi',
+                    'Tidak Kompeten'
+                )
+                ->count(),
+
+            'tidak_hadir' => (clone $query)
+                ->where(
+                    'asesmens.status_kompetensi',
+                    'Tidak Hadir'
+                )
+                ->count(),
+
+            'belum_dinilai' => (clone $query)
+                ->whereNull(
+                    'asesmens.status_kompetensi'
+                )
+                ->count(),
         ];
 
         return response()->json([
