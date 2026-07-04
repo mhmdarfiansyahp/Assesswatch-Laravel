@@ -15,9 +15,23 @@ class SertifikasiController extends Controller
      */
     public function index()
     {
-        return response()->json(
-            Sertifikasi::with('prodi')->get()
-        );
+        $sertifikasi = Sertifikasi::query()
+            ->select([
+                'id',
+                'prodi_id',
+                'nama_sertifikasi',
+                'lembaga',
+                'level',
+                'tanggal_sertifikasi',
+                'scheme_code',
+                'status'
+            ])
+            ->with([
+                'prodi:id,nama_prodi'
+            ])
+            ->paginate(10);
+
+        return response()->json($sertifikasi);
     }
 
     /**
