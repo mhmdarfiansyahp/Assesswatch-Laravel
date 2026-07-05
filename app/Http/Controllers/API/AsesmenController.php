@@ -7,6 +7,7 @@ use App\Models\Asesmens;
 use App\Models\AuditLog;
 use App\Models\Sertifikasi;
 use App\Models\User;
+use App\Services\AsesmenService;
 use App\Services\CertificateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,161 +16,49 @@ use Illuminate\Support\Facades\Storage;
 
 class AsesmenController extends Controller
 {
-    public function listMahasiswa(
-        Request $request,
-        Sertifikasi $sertifikasi
-    ) {
-        $instruktur = $request->user();
 
-        if ($instruktur->role !== 'instruktur') {
+    protected $service;
+
+    public function __construct(AsesmenService $service)
+    {
+        $this->service = $service;
+    }
+
+    public function listMahasiswa(Request $request, Sertifikasi $sertifikasi)
+    {
+        $result = $this->service->getMahasiswa($request, $sertifikasi);
+
+        if (!$result['status']) {
             return response()->json([
-                'message' => 'Unauthorized'
-            ], 403);
+                'message' => $result['message']
+            ], $result['code']);
         }
 
-        $hasAccess = DB::table('instruktur_prodi')
-            ->where('instruktur_id', $instruktur->id)
-            ->where('prodi_id', $sertifikasi->prodi_id)
-            ->exists();
-
-        if (!$hasAccess) {
-            return response()->json([
-                'message' => 'Anda tidak memiliki akses'
-            ], 403);
-        }
-
-        $asesmenMap = Asesmens::where('sertifikasi_id', $sertifikasi->id)
-            ->get()
-            ->keyBy('user_id');
-
-        $mahasiswa = User::where('role', 'mahasiswa')
-            ->where('prodi_id', $sertifikasi->prodi_id)
-            ->whereDoesntHave('asesmens', function ($q) use ($sertifikasi) {
-                $q->where('sertifikasi_id', $sertifikasi->id)
-                    ->where('status_kompetensi', 'Kompeten');
-            })
-            ->get()
-            ->map(function ($mhs) use ($asesmenMap) {
-
-                $asesmen = $asesmenMap[$mhs->id] ?? null;
-
-                $status = $asesmen?->status_kompetensi ?? "";
-
-                return [
-                    'id' => $mhs->id,
-                    'nim' => $mhs->nim,
-                    'nama' => $mhs->name,
-                    'status' => $status,
-                ];
-            });
-
-        return response()->json([
-            'message' => 'Data mahasiswa',
-
-            'sertifikasi' => [
-                'id' => $sertifikasi->id,
-                'nama_sertifikasi' => $sertifikasi->nama_sertifikasi,
-                'lembaga' => $sertifikasi->lembaga,
-                'level' => $sertifikasi->level,
-            ],
-
-            'data' => $mahasiswa
-        ]);
+        return response()->json($result['data']);
     }
 
     public function bulkInput(Request $request)
     {
-        $instruktur = $request->user();
-        if ($instruktur->role !== 'instruktur') {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
+        $validated = $request->validate([
+            'sertifikasi_id' => 'required|exists:sertifikasi,id',
+            'tanggal_asesmen' => 'required|date',
+            'asesmens' => 'required|array',
+            'asesmens.*.user_id' => 'required|exists:users,id',
+            'asesmens.*.status_kompetensi' => 'required|in:Kompeten,Tidak Kompeten,Tidak Hadir',
+            'asesmens.*.catatan' => 'nullable|string',
+            'asesmens.*.bukti_pendukung' => 'nullable|file|mimes:pdf,png,jpg,jpeg|max:5120',
+        ]);
 
-        $validated = $request->validate(['sertifikasi_id' => 'required|exists:sertifikasi,id', 'tanggal_asesmen' => 'required|date', 'asesmens' => 'required|array', 'asesmens.*.user_id' => 'required|exists:users,id', 'asesmens.*.status_kompetensi' => 'required|in:Kompeten,Tidak Kompeten,Tidak Hadir', 'asesmens.*.catatan' => 'nullable|string', 'asesmens.*.bukti_pendukung' => 'nullable|file|mimes:pdf,png,jpg,jpeg|max:5120',]);
-        $sertifikasi = Sertifikasi::findOrFail($validated['sertifikasi_id']);
+        $result = $this->service->bulkInput($request, $validated);
 
-        $hasAccess = DB::table('instruktur_prodi')
-            ->where('instruktur_id', $instruktur->id)
-            ->where('prodi_id', $sertifikasi->prodi_id)
-            ->exists();
-
-        if (!$hasAccess) {
+        if (!$result['status']) {
             return response()->json([
-                'message' => 'Anda tidak memiliki akses ke sertifikasi ini'
-            ], 403);
+                'message' => $result['message']
+            ], $result['code']);
         }
 
-        DB::beginTransaction();
-
-        try {
-            foreach ($validated['asesmens'] as $index => $item) {
-                $mahasiswa = User::where('id', $item['user_id'])->first();
-
-                if (!$mahasiswa || $mahasiswa->role !== 'mahasiswa') {
-                    throw new \Exception("User tidak valid: " . $item['user_id']);
-                }
-
-                if ($mahasiswa->prodi_id != $sertifikasi->prodi_id) {
-                    throw new \Exception("Mahasiswa beda prodi: " . $item['user_id']);
-                }
-
-                $asesmen = Asesmens::where('user_id', $mahasiswa->id)->where('sertifikasi_id', $sertifikasi->id)->first();
-                $oldValues = $asesmen ? $asesmen->toArray() : null;
-
-                $certificateCode = null;
-                if ($item['status_kompetensi'] === 'Kompeten') {
-                    if ($asesmen && $asesmen->certificate_code) {
-                        $certificateCode = $asesmen->certificate_code;
-                    } else {
-                        $certificateCode = CertificateService::generateCertificateCode($sertifikasi);
-                    }
-                }
-
-                $filePath = $asesmen?->bukti_pendukung;
-                if ($request->hasFile("asesmens.$index.bukti_pendukung")) {
-                    $file = $request->file("asesmens.$index.bukti_pendukung");
-                    if ($filePath) {
-                        Storage::disk('public')->delete($filePath);
-                    }
-
-                    $filePath = $file->store(
-                        'bukti-sertifikasi',
-                        'public'
-                    );
-                }
-
-                if ($item['status_kompetensi'] === 'Kompeten' && !$request->hasFile("asesmens.$index.bukti_pendukung") && !$asesmen?->bukti_pendukung) {
-                    throw new \Exception("Bukti sertifikasi wajib untuk mahasiswa kompeten");
-                }
-
-                if ($asesmen) {
-                    $asesmen->update([
-                        'status_kompetensi' => $item['status_kompetensi'],
-                        'catatan' => $item['catatan'] ?? null,
-                        'tanggal_asesmen' => $validated['tanggal_asesmen'],
-                        'instruktur_id' => $instruktur->id,
-                        'certificate_code' => $certificateCode ?? $asesmen?->certificate_code,
-                        'bukti_pendukung' => $filePath,
-                    ]);
-                } else {
-                    $asesmen = Asesmens::create([
-                        'user_id' => $mahasiswa->id,
-                        'sertifikasi_id' => $sertifikasi->id,
-                        'instruktur_id' => $instruktur->id,
-                        'status_kompetensi' => $item['status_kompetensi'],
-                        'catatan' => $item['catatan'] ?? null,
-                        'tanggal_asesmen' => $validated['tanggal_asesmen'],
-                        'certificate_code' => $certificateCode ?? $asesmen?->certificate_code,
-                        'bukti_pendukung' => $filePath,
-                    ]);
-                }
-
-                AuditLog::create(['user_id' => $instruktur->id, 'action' => $oldValues ? 'UPDATE_ASESMEN' : 'CREATE_ASESMEN', 'table_name' => 'asesmens', 'record_id' => $asesmen->id, 'old_values' => $oldValues ? json_encode($oldValues) : null, 'new_values' => json_encode($asesmen->fresh()->toArray()), 'ip_address' => $request->ip(),]);
-            }
-            DB::commit();
-            return response()->json(['message' => 'Input asesmen berhasil']);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['message' => 'Terjadi kesalahan', 'error' => $e->getMessage()], 500);
-        }
+        return response()->json([
+            'message' => $result['message']
+        ]);
     }
 }
