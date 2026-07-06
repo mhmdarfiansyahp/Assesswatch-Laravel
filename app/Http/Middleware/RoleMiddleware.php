@@ -19,7 +19,9 @@ class RoleMiddleware
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        if ($request->user()->role !== $role) {
+        $allowedRoles = explode('|', $role);
+
+        if (!in_array($request->user()->role, $allowedRoles)) {
             return response()->json(['message' => 'Forbidden (role mismatch)'], 403);
         }
 

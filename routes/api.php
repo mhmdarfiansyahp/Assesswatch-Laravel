@@ -31,11 +31,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
 
-    Route::middleware('role:admin')->group(function () {
-        Route::apiResource('users', UserController::class);
-        Route::apiResource('prodi', ProdiController::class);
-        Route::apiResource('sertifikasi', SertifikasiController::class);
-        Route::get('/dashboard/kompetensi-prodi', [DashboardController::class, 'kompetensiPerProdi']);
+    Route::middleware('role:admin|instruktur')->group(function () {
+
+        Route::get(
+            '/dashboard/kompetensi-prodi',
+            [DashboardController::class, 'kompetensiPerProdi']
+        );
+
         Route::get(
             '/dashboard/export-excel',
             [DashboardController::class, 'exportExcel']
@@ -45,6 +47,25 @@ Route::middleware('auth:sanctum')->group(function () {
             '/dashboard/export-pdf',
             [DashboardController::class, 'exportPdf']
         );
+
+        Route::get(
+            '/sertifikasi',
+            [SertifikasiController::class, 'index']
+        );
+
+        Route::get(
+            '/prodi',
+            [ProdiController::class, 'index']
+        );
+    });
+
+    Route::middleware('role:admin')->group(function () {
+        Route::apiResource('users', UserController::class);
+        Route::apiResource('prodi', ProdiController::class)
+            ->except(['index']);
+
+        Route::apiResource('sertifikasi', SertifikasiController::class)
+            ->except(['index']);
     });
 
     Route::middleware('role:instruktur')->group(function () {

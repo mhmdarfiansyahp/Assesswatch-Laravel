@@ -15,7 +15,6 @@ class AsesmenService
     public function getMahasiswa(Request $request, Sertifikasi $sertifikasi)
     {
         $instruktur = $request->user();
-
         if ($instruktur->role !== 'instruktur') {
             return [
                 'status' => false,
@@ -38,52 +37,64 @@ class AsesmenService
         }
 
         $mahasiswa = User::query()
-            ->leftJoin('asesmens', function ($join) use ($sertifikasi) {
-                $join->on('users.id', '=', 'asesmens.user_id')
-                    ->where('asesmens.sertifikasi_id', $sertifikasi->id);
+            ->where('role', 'mahasiswa')
+            ->where('prodi_id', $sertifikasi->prodi_id)
+
+            ->whereDoesntHave('asesmens', function ($q) use ($sertifikasi) {
+                $q->where('sertifikasi_id', $sertifikasi->id)
+                    ->where('status_kompetensi', 'Kompeten');
             })
-            ->where('users.role', 'mahasiswa')
-            ->where('users.prodi_id', $sertifikasi->prodi_id)
-            ->where(function ($q) {
-                $q->whereNull('asesmens.status_kompetensi')
-                    ->orWhere('asesmens.status_kompetensi', '!=', 'Kompeten');
-            })
-            ->select([
-                'users.id',
-                'users.nim',
-                'users.name as nama',
-                DB::raw('COALESCE(asesmens.status_kompetensi, "") as status')
-            ])
-            ->get();
+
+            ->get()
+
+            ->map(function ($mhs) use ($sertifikasi) {
+                $asesmen = Asesmens::query()
+                    ->where('user_id', $mhs->id)
+                    ->where('sertifikasi_id', $sertifikasi->id)
+                    ->first();
+
+                return [
+                    'id' => $mhs->id,
+                    'nim' => $mhs->nim,
+                    'nama' => $mhs->name,
+
+                    'status' => $asesmen?->status_kompetensi ?? '',
+                ];
+            });
 
         return [
             'status' => true,
+
             'data' => [
                 'message' => 'Data mahasiswa',
+
                 'sertifikasi' => [
                     'id' => $sertifikasi->id,
                     'nama_sertifikasi' => $sertifikasi->nama_sertifikasi,
                     'lembaga' => $sertifikasi->lembaga,
                     'level' => $sertifikasi->level,
                 ],
+
                 'data' => $mahasiswa
             ]
         ];
     }
-
-    public function bulkInput(Request $request, array $validated)
-    {
+    public function bulkInput(
+        Request $request,
+        array $validated
+    ) {
         $instruktur = $request->user();
 
         if ($instruktur->role !== 'instruktur') {
             return [
-                'status' => false,
                 'code' => 403,
                 'message' => 'Unauthorized'
             ];
         }
 
-        $sertifikasi = Sertifikasi::findOrFail($validated['sertifikasi_id']);
+        $sertifikasi = Sertifikasi::findOrFail(
+            $validated['sertifikasi_id']
+        );
 
         $hasAccess = DB::table('instruktur_prodi')
             ->where('instruktur_id', $instruktur->id)
@@ -92,128 +103,194 @@ class AsesmenService
 
         if (!$hasAccess) {
             return [
-                'status' => false,
                 'code' => 403,
-                'message' => 'Anda tidak memiliki akses ke sertifikasi ini'
+                'message' =>
+                'Anda tidak memiliki akses ke sertifikasi ini'
             ];
         }
-
-        $userIds = collect($validated['asesmens'])
-            ->pluck('user_id')
-            ->unique()
-            ->values();
-
-        $users = User::whereIn('id', $userIds)
-            ->get()
-            ->keyBy('id');
-
-        $asesmens = Asesmens::where('sertifikasi_id', $sertifikasi->id)
-            ->whereIn('user_id', $userIds)
-            ->get()
-            ->keyBy('user_id');
-
-        $uploadedFiles = $request->file('asesmens', []);
-
-        $auditLogs = [];
 
         DB::beginTransaction();
 
         try {
 
-            foreach ($validated['asesmens'] as $index => $item) {
+            foreach (
+                $validated['asesmens']
+                as $index => $item
+            ) {
 
-                $mahasiswa = $users->get($item['user_id']);
+                $mahasiswa = User::find(
+                    $item['user_id']
+                );
 
-                if (!$mahasiswa || $mahasiswa->role !== 'mahasiswa') {
-                    throw new \Exception("User tidak valid");
-                }
-
-                if ($mahasiswa->prodi_id != $sertifikasi->prodi_id) {
-                    throw new \Exception("Mahasiswa beda prodi");
-                }
-
-                $asesmen = $asesmens->get($mahasiswa->id);
-
-                $oldValues = $asesmen?->toArray();
-
-                $certificateCode = null;
-
-                if ($item['status_kompetensi'] === 'Kompeten') {
-
-                    if ($asesmen && $asesmen->certificate_code) {
-                        $certificateCode = $asesmen->certificate_code;
-                    } else {
-                        $certificateCode = CertificateService::generateCertificateCode($sertifikasi);
-                    }
-                }
-
-                $filePath = $asesmen?->bukti_pendukung;
-
-                $file = $uploadedFiles[$index]['bukti_pendukung'] ?? null;
-
-                if ($file) {
-
-                    if ($filePath) {
-                        Storage::disk('public')->delete($filePath);
-                    }
-
-                    $filePath = $file->store('bukti-sertifikasi', 'public');
+                if (
+                    !$mahasiswa ||
+                    $mahasiswa->role !== 'mahasiswa'
+                ) {
+                    throw new \Exception(
+                        "User tidak valid"
+                    );
                 }
 
                 if (
-                    $item['status_kompetensi'] === 'Kompeten'
-                    && !$file
-                    && !$asesmen?->bukti_pendukung
+                    $mahasiswa->prodi_id !=
+                    $sertifikasi->prodi_id
                 ) {
-                    throw new \Exception("Bukti sertifikasi wajib untuk mahasiswa kompeten");
+                    throw new \Exception(
+                        "Mahasiswa beda prodi"
+                    );
+                }
+
+                $asesmen = Asesmens::where(
+                    'user_id',
+                    $mahasiswa->id
+                )
+                    ->where(
+                        'sertifikasi_id',
+                        $sertifikasi->id
+                    )
+                    ->first();
+
+                $oldValues =
+                    $asesmen?->toArray();
+
+                $certificateCode = null;
+
+                if (
+                    $item['status_kompetensi']
+                    === 'Kompeten'
+                ) {
+
+                    if (
+                        $asesmen &&
+                        $asesmen->certificate_code
+                    ) {
+                        $certificateCode =
+                            $asesmen->certificate_code;
+                    } else {
+                        $certificateCode =
+                            CertificateService::generateCertificateCode(
+                                $sertifikasi
+                            );
+                    }
+                }
+
+                $filePath =
+                    $asesmen?->bukti_pendukung;
+
+                if (
+                    $request->hasFile(
+                        "asesmens.$index.bukti_pendukung"
+                    )
+                ) {
+
+                    $file = $request->file(
+                        "asesmens.$index.bukti_pendukung"
+                    );
+
+                    if ($filePath) {
+                        Storage::disk('public')
+                            ->delete($filePath);
+                    }
+
+                    $filePath = $file->store(
+                        'bukti-sertifikasi',
+                        'public'
+                    );
+                }
+
+                if (
+                    $item['status_kompetensi']
+                    === 'Kompeten'
+                    &&
+                    !$request->hasFile(
+                        "asesmens.$index.bukti_pendukung"
+                    )
+                    &&
+                    !$asesmen?->bukti_pendukung
+                ) {
+                    throw new \Exception(
+                        "Bukti sertifikasi wajib untuk mahasiswa kompeten"
+                    );
                 }
 
                 $data = [
-                    'status_kompetensi' => $item['status_kompetensi'],
-                    'catatan' => $item['catatan'] ?? null,
-                    'tanggal_asesmen' => $validated['tanggal_asesmen'],
-                    'instruktur_id' => $instruktur->id,
-                    'certificate_code' => $certificateCode ?? $asesmen?->certificate_code,
-                    'bukti_pendukung' => $filePath,
+                    'status_kompetensi' =>
+                    $item['status_kompetensi'],
+
+                    'catatan' =>
+                    $item['catatan'] ?? null,
+
+                    'tanggal_asesmen' =>
+                    $validated['tanggal_asesmen'],
+
+                    'instruktur_id' =>
+                    $instruktur->id,
+
+                    'certificate_code' =>
+                    $certificateCode
+                        ?? $asesmen?->certificate_code,
+
+                    'bukti_pendukung' =>
+                    $filePath,
                 ];
 
                 if ($asesmen) {
+
                     $asesmen->update($data);
                 } else {
-                    $data['user_id'] = $mahasiswa->id;
-                    $data['sertifikasi_id'] = $sertifikasi->id;
-                    $asesmen = Asesmens::create($data);
+
+                    $data['user_id'] =
+                        $mahasiswa->id;
+
+                    $data['sertifikasi_id'] =
+                        $sertifikasi->id;
+
+                    $asesmen =
+                        Asesmens::create($data);
                 }
 
-                $auditLogs[] = [
-                    'user_id' => $instruktur->id,
-                    'action' => $oldValues ? 'UPDATE_ASESMEN' : 'CREATE_ASESMEN',
-                    'table_name' => 'asesmens',
-                    'record_id' => $asesmen->id,
-                    'old_values' => $oldValues ? json_encode($oldValues) : null,
-                    'new_values' => json_encode($asesmen->fresh()->toArray()),
-                    'ip_address' => $request->ip(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
+                AuditLog::create([
+                    'user_id' =>
+                    $instruktur->id,
 
-            if (!empty($auditLogs)) {
-                AuditLog::insert($auditLogs);
+                    'action' =>
+                    $oldValues
+                        ? 'UPDATE_ASESMEN'
+                        : 'CREATE_ASESMEN',
+
+                    'table_name' =>
+                    'asesmens',
+
+                    'record_id' =>
+                    $asesmen->id,
+
+                    'old_values' =>
+                    $oldValues
+                        ? json_encode($oldValues)
+                        : null,
+
+                    'new_values' =>
+                    json_encode(
+                        $asesmen->fresh()->toArray()
+                    ),
+
+                    'ip_address' =>
+                    $request->ip(),
+                ]);
             }
 
             DB::commit();
 
             return [
-                'status' => true,
-                'message' => 'Input asesmen berhasil'
+                'code' => 200,
+                'message' =>
+                'Input asesmen berhasil'
             ];
         } catch (\Exception $e) {
 
             DB::rollBack();
 
             return [
-                'status' => false,
                 'code' => 500,
                 'message' => $e->getMessage()
             ];
