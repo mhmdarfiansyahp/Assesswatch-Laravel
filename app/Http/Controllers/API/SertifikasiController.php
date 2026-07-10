@@ -136,6 +136,7 @@ class SertifikasiController extends Controller
 
         $sertifikasi = Sertifikasi::with('prodi')
             ->whereIn('prodi_id', $prodiIds)
+            ->where('status', true)
             ->get();
 
         return response()->json([

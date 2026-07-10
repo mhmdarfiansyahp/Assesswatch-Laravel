@@ -30,7 +30,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
-
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
+    
     Route::middleware('role:admin|instruktur')->group(function () {
 
         Route::get(
