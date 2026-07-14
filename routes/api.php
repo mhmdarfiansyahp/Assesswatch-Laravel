@@ -24,6 +24,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
 
+Route::get('/verifikasi/sertifikat/{code}', [MahasiswaKompetensiController::class, 'verifikasi'])
+    ->name('verifikasi.sertifikat');
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -31,7 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
-    
+
     Route::middleware('role:admin|instruktur')->group(function () {
 
         Route::get(

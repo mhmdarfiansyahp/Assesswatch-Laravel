@@ -13,17 +13,17 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         /*
-        |----------------------------------------
-        | PRODI
-        |----------------------------------------
+        |--------------------------------------------------------------------------
+        | AMBIL DATA PRODI
+        |--------------------------------------------------------------------------
         */
         $teknikInformatika = Prodi::where('nama_prodi', 'Teknik Informatika')->first();
         $sistemInformasi = Prodi::where('nama_prodi', 'Sistem Informasi')->first();
 
         /*
-        |----------------------------------------
-        | ADMIN
-        |----------------------------------------
+        |--------------------------------------------------------------------------
+        | ADMIN (Tetap Menggunakan Nama Default Anda)
+        |--------------------------------------------------------------------------
         */
         User::create([
             'name' => 'Admin Utama',
@@ -36,14 +36,14 @@ class UserSeeder extends Seeder
         ]);
 
         /*
-        |----------------------------------------
-        | INSTRUKTUR
-        |----------------------------------------
+        |--------------------------------------------------------------------------
+        | INSTRUKTUR (1 User = 1 Prodi di Tabel Pivot)
+        |--------------------------------------------------------------------------
         */
         $instruktur1 = User::create([
-            'name' => 'Instruktur Satu',
-            'username' => 'instruktur1',
-            'email' => 'instruktur1@mail.com',
+            'name' => 'Dr. Budi Darmawan, M.T.',
+            'username' => 'budi_darmawan',
+            'email' => 'budi.darmawan@mail.com',
             'password' => Hash::make('password'),
             'role' => 'instruktur',
             'prodi_id' => null,
@@ -52,9 +52,9 @@ class UserSeeder extends Seeder
         ]);
 
         $instruktur2 = User::create([
-            'name' => 'Instruktur Dua',
-            'username' => 'instruktur2',
-            'email' => 'instruktur2@mail.com',
+            'name' => 'Siti Aminah, M.Kom.',
+            'username' => 'siti_aminah',
+            'email' => 'siti.aminah@mail.com',
             'password' => Hash::make('password'),
             'role' => 'instruktur',
             'prodi_id' => null,
@@ -62,11 +62,6 @@ class UserSeeder extends Seeder
             'status' => true,
         ]);
 
-        /*
-        |----------------------------------------
-        | RELASI INSTRUKTUR - PRODI
-        |----------------------------------------
-        */
         DB::table('instruktur_prodi')->insert([
             [
                 'instruktur_id' => $instruktur1->id,
@@ -75,71 +70,63 @@ class UserSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'instruktur_id' => $instruktur1->id,
+                'instruktur_id' => $instruktur2->id,
                 'prodi_id' => $sistemInformasi->id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-            [
-                'instruktur_id' => $instruktur2->id,
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | MAHASISWA TEKNIK INFORMATIKA (5 Users)
+        |--------------------------------------------------------------------------
+        */
+        $mhsTI = [
+            ['name' => 'Rian Hidayat', 'username' => 'rian_hidayat', 'email' => 'rian.h@mail.com', 'nim' => '221011400001'],
+            ['name' => 'Aditya Pratama', 'username' => 'aditya_pratama', 'email' => 'aditya.p@mail.com', 'nim' => '221011400002'],
+            ['name' => 'Dinda Lestari', 'username' => 'dinda_lestari', 'email' => 'dinda.l@mail.com', 'nim' => '221011400003'],
+            ['name' => 'Fikri Haikal', 'username' => 'fikri_haikal', 'email' => 'fikri.h@mail.com', 'nim' => '221011400004'],
+            ['name' => 'Amalia Rosa', 'username' => 'amalia_rosa', 'email' => 'amalia.r@mail.com', 'nim' => '221011400005'],
+        ];
+
+        foreach ($mhsTI as $mhs) {
+            User::create([
+                'name' => $mhs['name'],
+                'username' => $mhs['username'],
+                'email' => $mhs['email'],
+                'password' => Hash::make('password'),
+                'role' => 'mahasiswa',
                 'prodi_id' => $teknikInformatika->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+                'nim' => $mhs['nim'],
+                'status' => true,
+            ]);
+        }
 
         /*
-        |----------------------------------------
-        | MAHASISWA TEKNIK INFORMATIKA
-        |----------------------------------------
+        |--------------------------------------------------------------------------
+        | MAHASISWA SISTEM INFORMASI (5 Users)
+        |--------------------------------------------------------------------------
         */
-        User::create([
-            'name' => 'Mahasiswa TI 1',
-            'username' => 'mhs_ti_1',
-            'email' => 'mhs_ti_1@mail.com',
-            'password' => Hash::make('password'),
-            'role' => 'mahasiswa',
-            'prodi_id' => $teknikInformatika->id,
-            'nim' => '221011400001',
-            'status' => true,
-        ]);
+        $mhsSI = [
+            ['name' => 'Reza Pahlevi', 'username' => 'reza_pahlevi', 'email' => 'reza.p@mail.com', 'nim' => '221011500001'],
+            ['name' => 'Nadia Utami', 'username' => 'nadia_utami', 'email' => 'nadia.u@mail.com', 'nim' => '221011500002'],
+            ['name' => 'Dimas Saputra', 'username' => 'dimas_saputra', 'email' => 'dimas.s@mail.com', 'nim' => '221011500003'],
+            ['name' => 'Putri Wulandari', 'username' => 'putri_wulandari', 'email' => 'putri.w@mail.com', 'nim' => '221011500004'],
+            ['name' => 'Eko Prasetyo', 'username' => 'eko_prasetyo', 'email' => 'eko.p@mail.com', 'nim' => '221011500005'],
+        ];
 
-        User::create([
-            'name' => 'Mahasiswa TI 2',
-            'username' => 'mhs_ti_2',
-            'email' => 'mhs_ti_2@mail.com',
-            'password' => Hash::make('password'),
-            'role' => 'mahasiswa',
-            'prodi_id' => $teknikInformatika->id,
-            'nim' => '221011400002',
-            'status' => true,
-        ]);
-
-        /*
-        |----------------------------------------
-        | MAHASISWA SISTEM INFORMASI
-        |----------------------------------------
-        */
-        User::create([
-            'name' => 'Mahasiswa SI 1',
-            'username' => 'mhs_si_1',
-            'email' => 'mhs_si_1@mail.com',
-            'password' => Hash::make('password'),
-            'role' => 'mahasiswa',
-            'prodi_id' => $sistemInformasi->id,
-            'nim' => '221011500001',
-            'status' => true,
-        ]);
-
-        User::create([
-            'name' => 'Mahasiswa SI 2',
-            'username' => 'mhs_si_2',
-            'email' => 'mhs_si_2@mail.com',
-            'password' => Hash::make('password'),
-            'role' => 'mahasiswa',
-            'prodi_id' => $sistemInformasi->id,
-            'nim' => '221011500002',
-            'status' => true,
-        ]);
+        foreach ($mhsSI as $mhs) {
+            User::create([
+                'name' => $mhs['name'],
+                'username' => $mhs['username'],
+                'email' => $mhs['email'],
+                'password' => Hash::make('password'),
+                'role' => 'mahasiswa',
+                'prodi_id' => $sistemInformasi->id,
+                'nim' => $mhs['nim'],
+                'status' => true,
+            ]);
+        }
     }
 }
