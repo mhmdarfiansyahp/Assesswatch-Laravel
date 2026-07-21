@@ -92,7 +92,7 @@
             <tr>
                 <td width="35%">Nama Mahasiswa</td>
                 <td width="5%">:</td>
-                <td width="60%"><strong>{{ $asesmen->user->nama }}</strong></td>
+                <td width="60%"><strong>{{ $asesmen->user->name }}</strong></td>
             </tr>
             <tr>
                 <td>Nomor Induk Mahasiswa</td>
