@@ -7,6 +7,7 @@ use App\Http\Controllers\API\ProdiController;
 use App\Http\Controllers\API\SertifikasiController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\Api\Admin\DashboardController;
+use App\Http\Controllers\Api\ForgotPasswordController;
 use App\Http\Controllers\Api\ProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,8 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail']);
+Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword']);
 
 Route::get('/verifikasi/sertifikat/{code}', [MahasiswaKompetensiController::class, 'verifikasi'])
     ->name('verifikasi.sertifikat');
