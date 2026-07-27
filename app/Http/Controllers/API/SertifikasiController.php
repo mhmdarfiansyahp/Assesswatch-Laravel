@@ -13,9 +13,9 @@ class SertifikasiController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $sertifikasi = Sertifikasi::query()
+        $query = Sertifikasi::query()
             ->select([
                 'id',
                 'prodi_id',
@@ -28,10 +28,18 @@ class SertifikasiController extends Controller
             ])
             ->with([
                 'prodi:id,nama_prodi'
-            ])
-            ->paginate(10);
+            ]);
 
-        return response()->json($sertifikasi);
+        if ($request->filled('prodi_id')) {
+            $query->where('prodi_id', $request->prodi_id);
+        }
+
+        if ($request->boolean('all')) {
+            return response()->json([
+                'data' => $query->where('status', true)->get()
+            ]);
+        }
+        return response()->json($query->paginate(10));
     }
 
     /**

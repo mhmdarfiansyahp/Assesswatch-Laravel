@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Asesmens;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -47,43 +48,57 @@ class MahasiswaKompetensiController extends Controller
 
     public function download(Request $request, Asesmens $asesmen)
     {
-        $user = $request->user();
+        try {
+            $user = $request->user();
 
-        if ($asesmen->user_id !== $user->id) {
+            // 1. Otorisasi kepemilikan data
+            if ((int)$asesmen->user_id !== (int)$user->id) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+
+            // 2. Pastikan mahasiswa memang sudah dinyatakan "Kompeten"
+            if ($asesmen->status_kompetensi !== 'Kompeten') {
+                return response()->json([
+                    'message' => 'Surat keterangan belum tersedia atau Anda belum kompeten.'
+                ], 400);
+            }
+
+            // Load relasi user dan sertifikasi agar datanya lengkap di PDF
+            $asesmen->load(['user', 'sertifikasi']);
+
+            // 3. Ambil kode sertifikat & buat URL untuk React Frontend
+            $code = $asesmen->certificate_code ?? 'INVALID-CODE';
+            $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
+            $qrValue = "{$frontendUrl}/verify-certificate?code={$code}";
+
+            // Generate QR Code format SVG base64
+            $qrCode = base64_encode(
+                QrCode::format('svg')
+                    ->size(140)
+                    ->errorCorrection('H')
+                    ->generate($qrValue)
+            );
+
+            // 4. Render file Blade menjadi PDF
+            $pdf = Pdf::loadView('pdf.surat-keterangan-kompetensi', [
+                'asesmen' => $asesmen,
+                'qrCode'  => $qrCode
+            ])->setPaper('a4', 'portrait');
+
+            // 5. Download file dengan nama yang dinamis
+            $namaUser = $user->name ?? $user->nama ?? 'Mahasiswa';
+            $fileName = 'Surat_Keterangan_Kompetensi_' . str_replace(' ', '_', $namaUser) . '.pdf';
+
+            return $pdf->download($fileName);
+        } catch (\Exception $e) {
+            Log::error('PDF Download Error: ' . $e->getMessage());
+
             return response()->json([
-                'message' => 'Unauthorized'
-            ], 403);
+                'message' => 'Gagal mengunduh sertifikat: ' . $e->getMessage()
+            ], 500);
         }
-
-        // 2. Pastikan mahasiswa memang sudah dinyatakan "Kompeten"
-        if ($asesmen->status_kompetensi !== 'Kompeten') {
-            return response()->json([
-                'message' => 'Surat keterangan belum tersedia atau Anda belum kompeten.'
-            ], 400);
-        }
-
-        // Load relasi user dan sertifikasi agar datanya lengkap di PDF
-        $asesmen->load(['user', 'sertifikasi']);
-
-        // 3. Generate QR Code (Isinya bisa berupa URL verifikasi atau Kode Sertifikat)
-        // Kita convert ke Base64 format PNG agar bisa dibaca dengan baik oleh DomPDF
-        $qrValue = route('verifikasi.sertifikat', ['code' => $asesmen->certificate_code]); // Contoh URL verifikasi
-        $qrCode = base64_encode(
-            QrCode::format('svg')
-                ->size(150)
-                ->errorCorrection('H')
-                ->generate($qrValue)
-        );
-
-        // 4. Render file Blade menjadi PDF
-        $pdf = Pdf::loadView('pdf.surat-keterangan-kompetensi', [
-            'asesmen' => $asesmen,
-            'qrCode' => $qrCode
-        ])->setPaper('a4', 'portrait'); // Umumnya surat keterangan berbentuk Portrait (Tegak)
-
-        // 5. Download file dengan nama yang dinamis
-        $fileName = 'Surat_Keterangan_Kompetensi_' . str_replace(' ', '_', $user->nama) . '.pdf';
-        return $pdf->download($fileName);
     }
 
     public function verifikasi($code)

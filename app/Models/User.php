@@ -53,7 +53,6 @@ class User extends Authenticatable
         return $this->belongsTo(Prodi::class);
     }
 
-    // instruktur bisa mengampu banyak prodi
     public function prodiYangDiampu()
     {
         return $this->belongsToMany(
@@ -74,7 +73,6 @@ class User extends Authenticatable
         return $this->hasMany(Asesmens::class, 'user_id');
     }
 
-    // asesmen yang dilakukan instruktur
     public function asesmenSebagaiInstruktur()
     {
         return $this->hasMany(Asesmens::class, 'instruktur_id');
